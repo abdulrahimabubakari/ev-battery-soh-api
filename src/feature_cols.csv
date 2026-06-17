@@ -1,0 +1,16 @@
+0
+discharge_duration
+voltage_mean
+voltage_min
+voltage_drop
+voltage_std
+current_mean
+temp_mean
+temp_max
+temp_rise
+temp_std
+energy_discharged
+voltage_slope
+time_below_3_5v
+time_above_35c
+cycle_number

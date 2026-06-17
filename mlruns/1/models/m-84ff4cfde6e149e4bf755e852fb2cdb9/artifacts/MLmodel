@@ -1,0 +1,23 @@
+artifact_path: file:C:/Users/LENOVO/ev-battery-soh-api/mlruns/1/models/m-84ff4cfde6e149e4bf755e852fb2cdb9/artifacts
+flavors:
+  lightgbm:
+    code: null
+    data: model.pkl
+    lgb_version: 4.6.0
+    model_class: lightgbm.sklearn.LGBMRegressor
+    serialization_format: cloudpickle
+    skops_trusted_types: null
+  python_function:
+    data: model.pkl
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.lightgbm
+    python_version: 3.13.7
+mlflow_version: 3.13.0
+model_id: m-84ff4cfde6e149e4bf755e852fb2cdb9
+model_size_bytes: 341057
+model_uuid: m-84ff4cfde6e149e4bf755e852fb2cdb9
+prompts: null
+run_id: 2127df5d867b471c8e7d9548e691ad24
+utc_time_created: '2026-06-17 00:59:46.415368'
