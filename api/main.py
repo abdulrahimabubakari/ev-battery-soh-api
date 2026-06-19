@@ -19,11 +19,17 @@ FEATURE_COLS = [
     'temp_std', 'energy_discharged', 'voltage_slope',
     'time_below_3_5v', 'time_above_35c', 'cycle_number'
 ]
-
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(
     title="EV Battery SoH Prediction API",
     description="Predicts battery State-of-Health using physics-informed ML features",
     version="1.0.0"
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ── Schemas ────────────────────────────────────────────────
