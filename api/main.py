@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel, Field
 from typing import List
 import pickle
@@ -135,3 +135,72 @@ async def batch_predict(request: BatchRequest):
         total_cycles=len(predictions),
         inference_time_ms=round(elapsed_ms, 3)
     )
+import io
+
+@app.post("/predict-from-csv")
+async def predict_from_csv(file: UploadFile = File(...)):
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="File must be a CSV")
+    
+    contents = await file.read()
+    
+    try:
+        df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
+        df.columns = df.columns.str.strip()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Could not parse CSV file")
+    
+    required = ['Voltage_measured', 'Current_measured', 
+                'Temperature_measured', 'Time']
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Missing columns: {missing}. Required: {required}"
+        )
+    
+    df = df.dropna()
+    if len(df) < 10:
+        raise HTTPException(status_code=400, detail="CSV needs at least 10 rows")
+    
+    start = time.perf_counter()
+    
+    v = df['Voltage_measured'].values
+    i = df['Current_measured'].values
+    t = df['Temperature_measured'].values
+    time_arr = df['Time'].values
+
+    dt = np.diff(time_arr)
+    power = np.abs(i[:-1]) * v[:-1]
+
+    features = {
+        'discharge_duration': float(time_arr[-1] - time_arr[0]),
+        'voltage_mean': float(np.mean(v)),
+        'voltage_min': float(np.min(v)),
+        'voltage_drop': float(v[0] - v[-1]),
+        'voltage_std': float(np.std(v)),
+        'current_mean': float(np.mean(np.abs(i))),
+        'temp_mean': float(np.mean(t)),
+        'temp_max': float(np.max(t)),
+        'temp_rise': float(t[-1] - t[0]),
+        'temp_std': float(np.std(t)),
+        'energy_discharged': float(np.sum(power * dt)),
+        'voltage_slope': float(np.polyfit(time_arr, v, 1)[0]),
+        'time_below_3_5v': float(np.sum(v < 3.5) / len(v)),
+        'time_above_35c': float(np.sum(t > 35) / len(t)),
+        'cycle_number': 1,
+    }
+
+    X = np.array([[features[col] for col in FEATURE_COLS]])
+    soh = float(model.predict(X)[0])
+    soh = max(0.0, min(100.0, soh))
+    elapsed_ms = (time.perf_counter() - start) * 1000
+
+    return {
+        "soh_percent": round(soh, 2),
+        "status": get_status(soh),
+        "inference_time_ms": round(elapsed_ms, 3),
+        "rows_processed": len(df),
+        "features_extracted": features,
+        "filename": file.filename
+    }

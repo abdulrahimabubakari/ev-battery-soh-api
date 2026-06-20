@@ -25,6 +25,103 @@ const DEFAULTS = {
   cycle_number: 50,
 };
 
+function CSVUpload({ apiStatus }) {
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [csvResult, setCsvResult] = useState(null);
+  const [csvError, setCsvError] = useState(null);
+
+  const handleFile = async (file) => {
+    if (!file || !file.name.endsWith('.csv')) {
+      setCsvError('Please upload a .csv file');
+      return;
+    }
+    setUploading(true);
+    setCsvError(null);
+    setCsvResult(null);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await axios.post(`${API}/predict-from-csv`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setCsvResult(res.data);
+    } catch (e) {
+      setCsvError('Upload failed — check the CSV format');
+    }
+    setUploading(false);
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    handleFile(file);
+  };
+
+  const status = csvResult ? getStatus(csvResult.soh_percent) : null;
+
+  return (
+    <div style={s.panel}>
+      <div style={s.panelTitle}>CSV upload — raw cycle data</div>
+      <div
+        onDragOver={e => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        onClick={() => document.getElementById('csv-input').click()}
+        style={{
+          border: `1.5px dashed ${dragging ? '#185FA5' : '#ddd'}`,
+          borderRadius: 8,
+          padding: '1.5rem',
+          textAlign: 'center',
+          cursor: 'pointer',
+          background: dragging ? '#E6F1FB' : 'transparent',
+          transition: 'all 0.15s'
+        }}
+      >
+        <input
+          id="csv-input"
+          type="file"
+          accept=".csv"
+          style={{ display: 'none' }}
+          onChange={e => handleFile(e.target.files[0])}
+        />
+        <div style={{ fontSize: 24, marginBottom: 8 }}>📂</div>
+        <div style={{ fontSize: 13, color: '#888' }}>
+          {uploading ? 'Processing...' : 'Drop a battery cycle CSV or click to browse'}
+        </div>
+        <div style={{ fontSize: 11, color: '#bbb', marginTop: 4 }}>
+          Requires: Voltage_measured, Current_measured, Temperature_measured, Time
+        </div>
+      </div>
+
+      {csvError && (
+        <div style={{ ...s.errorBar, marginTop: 10, marginBottom: 0 }}>{csvError}</div>
+      )}
+
+      {csvResult && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 13, color: '#888' }}>{csvResult.filename}</span>
+            <span style={{ fontSize: 11, color: '#bbb' }}>{csvResult.rows_processed} rows · {csvResult.inference_time_ms}ms</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ fontSize: 36, fontWeight: 500, color: getSoHColor(csvResult.soh_percent) }}>
+              {csvResult.soh_percent.toFixed(1)}%
+            </div>
+            <div>
+              <div style={{ fontSize: 13, color: '#888' }}>State of health</div>
+              <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 500, background: status.bg, color: status.color, marginTop: 3 }}>
+                {status.label}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const FEATURE_IMPORTANCE = [
   { name: "energy discharged", pct: 57 },
   { name: "discharge duration", pct: 34 },
@@ -332,6 +429,9 @@ export default function App() {
             ))}
           </div>
         </div>
+      <div style={{ marginTop: 16 }}>
+        <CSVUpload apiStatus={apiStatus} />
+      </div>
       </div>
     </div>
   );
