@@ -4,7 +4,9 @@
 
 A production-grade ML system for predicting lithium-ion battery degradation using physics-informed features and gradient boosting models.
 
-
+## Live Demo
+- **API:** https://battery-soh-predictor.onrender.com/docs
+- **Health:** https://battery-soh-predictor.onrender.com/health
 
 \## Results
 
