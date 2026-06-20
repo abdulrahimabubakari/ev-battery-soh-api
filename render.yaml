@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: ev-battery-soh-api
+    runtime: python
+    buildCommand: pip install pandas numpy scipy scikit-learn lightgbm fastapi uvicorn[standard] pydantic pyarrow
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
